@@ -88,7 +88,6 @@ jobs:
           command: |
             source $BASH_ENV
             cd ~/project/
-            pwd
             terraform plan -input=false > /tmp/plan-output
       - persist_to_workspace:
           root: /tmp
@@ -118,9 +117,9 @@ jobs:
             curl --location --request POST "$pr_comment_url" \
             -u $GH_USER:$GH_TOKEN \
             --header 'Content-Type: application/json' \
-            --data-raw '{
-            "body": "$pr_comment"
-            }'
+            --data-raw "{
+            \"body\": \"$pr_comment\"
+            }"
           fi
 
   apply:
@@ -139,7 +138,6 @@ jobs:
             pip install --user awscli
             export PATH="~/.local/bin:$PATH"
             git clone https://github.com/hashicorp/learn-terraform-circleci/ .
-            pwd
             aws s3 sync --acl public-read "/home/circleci/project/assets" s3://${APP_BUCKET}
 
   destroy:
