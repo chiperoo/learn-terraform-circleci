@@ -113,7 +113,7 @@ jobs:
           else
             pr_comment_url=$(echo $pr_response | jq -r ".[]._links.comments.href")
 
-            pr_comment = `cat /tmp/plan-output`
+            pr_comment=$(cat /tmp/plan-output)
 
             curl --location --request POST "$pr_comment_url" \
             -u $GH_USER:$GH_API \
