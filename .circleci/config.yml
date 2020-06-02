@@ -124,7 +124,7 @@ jobs:
             curl --location --request POST "$pr_comment_url" \
             -u $GH_USER:$GH_TOKEN \
             --header 'Content-Type: application/json' \
-            --data-raw @tf_plan_comment
+            --data-raw "$pr_comment_json"
           fi
 
   apply:
