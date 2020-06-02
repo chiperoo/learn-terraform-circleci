@@ -117,16 +117,14 @@ jobs:
               # get the TF plan output (from the workspace) and replace double quotes to single quotes
               pr_comment=$(cat /tmp/plan-output | sed 's/"/\\\"/g' | sed 's/$/\\n/g' | tr -d '\n')
 
-              echo "{ \"body\": \"$pr_comment\" }" > tf_plan_comment 
-
-              pr_comment_json="{ \"body\": \"\`\`\`$pr_comment\`\`\`\" }"
+              pr_comment_json="{ \"body\": \"\`\`\`\n$pr_comment\n\`\`\`\" }"
 
               echo "URL: $pr_comment_url"
               echo "JSON----------------\n$pr_comment_json\n----------------"
 
               curl --location --request POST "$pr_comment_url" \
               -u $GH_USER:$GH_TOKEN \
-              --header 'Content-Type: application/vnd.github.comfort-fade-preview+json' \
+              --header 'Content-Type: application/json' \
               --data-raw "$pr_comment_json"
             fi
 
