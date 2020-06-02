@@ -119,8 +119,9 @@ jobs:
 
               echo "{ \"body\": \"$pr_comment\" }" > tf_plan_comment 
 
-              pr_comment_json="{ \"body\": \"$pr_comment\" }"
+              pr_comment_json="{ \"body\": \"```$pr_comment```\" }"
 
+              echo "URL: $pr_comment_url"
               echo "JSON----------------\n$pr_comment_json\n----------------"
 
               curl --location --request POST "$pr_comment_url" \
