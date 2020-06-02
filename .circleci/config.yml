@@ -120,7 +120,7 @@ jobs:
             -u $GH_USER:$GH_TOKEN \
             --header 'Content-Type: application/json' \
             --data-raw "{
-            \"body\": \'$pr_comment\'
+            \"body\": '$pr_comment'
             }"
           fi
 
