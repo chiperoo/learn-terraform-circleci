@@ -115,7 +115,7 @@ jobs:
               pr_comment_url=$(echo $pr_response | jq -r ".[]._links.comments.href")
 
               # get the TF plan output (from the workspace) and replace double quotes to single quotes
-              pr_comment=$(cat /tmp/plan-output | sed 's/"/\\\"/g' | sed 's/\S$/\S\\n/g' | tr -d '\n')
+              pr_comment=$(cat /tmp/plan-output | sed 's/"/\\\"/g' | sed 's/$/\\n/g' | tr -d '\n')
 
               echo "{ \"body\": \"$pr_comment\" }" > tf_plan_comment 
 
@@ -125,7 +125,7 @@ jobs:
 
               curl --location --request POST "$pr_comment_url" \
               -u $GH_USER:$GH_TOKEN \
-              --header 'Content-Type: application/json' \
+              --header 'Content-Type: application/vnd.github.comfort-fade-preview+json' \
               --data-raw "$pr_comment_json"
             fi
 
