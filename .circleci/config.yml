@@ -114,6 +114,8 @@ jobs:
 
             pr_comment=$(cat /tmp/plan-output)
 
+            echo "PR_COMMENT-----------------\n$pr_comment\n-----------------------"
+
             curl --location --request POST "$pr_comment_url" \
             -u $GH_USER:$GH_TOKEN \
             --header 'Content-Type: application/json' \
