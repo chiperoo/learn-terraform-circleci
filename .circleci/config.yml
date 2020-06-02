@@ -89,7 +89,7 @@ jobs:
             source $BASH_ENV
             cd ~/project/
             terraform plan -input=false | tee /tmp/plan-output
-      - persist_to_workspace:
+      - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
             - plan-output      
@@ -112,15 +112,14 @@ jobs:
           else
             pr_comment_url=$(echo $pr_response | jq -r ".[]._links.comments.href")
 
-            pr_comment=$(cat /tmp/plan-output)
-
-            echo "PR_COMMENT-----------------\n$pr_comment\n-----------------------"
+            # get the TF plan output (from the workspace) and replace double quotes to single quotes
+            pr_comment=$(cat /tmp/plan-output | sed "s/\"/'/g")
 
             curl --location --request POST "$pr_comment_url" \
             -u $GH_USER:$GH_TOKEN \
             --header 'Content-Type: application/json' \
             --data-raw "{
-            \"body\": '$pr_comment'
+            \"body\": \"$pr_comment\"
             }"
           fi
 
@@ -166,17 +165,17 @@ workflows:
       - update_pr:
           requires:
             - plan
-      - apply:
-          requires:
-            - plan
-      - deployment:
-          requires:
-            - apply
-      - hold:
-          type: approval
-          requires:
-            - deployment
-      - destroy:
-          requires:
-            - hold
+#      - apply:
+#          requires:
+#            - plan
+#      - deployment:
+#          requires:
+#            - apply
+#      - hold:
+#          type: approval
+#          requires:
+#            - deployment
+#      - destroy:
+#          requires:
+#            - hold
 
