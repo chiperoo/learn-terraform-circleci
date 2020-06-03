@@ -114,10 +114,13 @@ jobs:
             else
               pr_comment_url=$(echo $pr_response | jq -r ".[]._links.comments.href")
 
-              # get the TF plan output (from the workspace) and replace double quotes to single quotes
-              pr_comment=$(cat /tmp/plan-output | sed 's/"/\\\"/g' | sed 's/$/\\n/g' | tr -d '\n')
+              # get the TF plan output (from the workspace) 
+              pr_comment=$(cat /tmp/plan-output | \
+                sed 's/"/\\\"/g' | \   # escape the double quotes
+                sed 's/$/\\n/g' | \    # add \n at the end of each line
+                tr -d '\n')            # delete empty lines
 
-              pr_comment_json="{ \"body\": \"\`\`\`\n$pr_comment\n\`\`\`\" }"
+              pr_comment_json="{ \"body\": \"```\n$pr_comment\n```\" }"
 
               echo "URL: $pr_comment_url"
               echo "JSON----------------\n$pr_comment_json\n----------------"
