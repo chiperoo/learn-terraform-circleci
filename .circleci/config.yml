@@ -127,7 +127,7 @@ jobs:
               -u $GH_USER:$GH_TOKEN \
               --header 'Content-Type: application/json' \
               --data-binary "${pr_comment_json}" \
-              -- trace-ascii moo.out
+              --trace-ascii moo.out
 
               cat moo.out
             fi
