@@ -121,12 +121,10 @@ jobs:
               pr_comment=$(cat /tmp/plan-output | \
                 sed 's/"/\\\"/g' | \
                 sed 's/$/\\n/g' | \
-                tr -d '\n')            # delete empty lines
+                tr -d '\n')
 
               codeblock='```'
               pr_comment_json="{ \"body\": \"${codeblock}\n${pr_comment}\n${codeblock}\" }"
-
-              echo "JSON----------------\n${pr_comment_json}\n----------------"
 
               curl --location --request POST "${pr_comment_url}" \
               -u $GH_USER:$GH_TOKEN \
