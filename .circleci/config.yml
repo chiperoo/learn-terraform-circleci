@@ -88,7 +88,7 @@ jobs:
           command: |
             source $BASH_ENV
             cd ~/project/
-            terraform plan -input=false | tee /tmp/plan-output
+            terraform plan -input=false -no-color | tee /tmp/plan-output
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
