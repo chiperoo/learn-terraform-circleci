@@ -115,21 +115,23 @@ jobs:
               pr_comment_url=$(echo ${pr_response} | jq -r ".[]._links.comments.href")
 
               # get the TF plan output (from the workspace) 
-              pr_comment=$(cat /tmp/plan-output | sed 's/"/\\\"/g' | sed 's/$/\\n/g' | tr -d '\n')            # delete empty lines
+              # 1. escape the double quotes
+              # 2. add a \n at the end of each line
+              # 3. delete the empty lines
+              pr_comment=$(cat /tmp/plan-output | \
+                sed 's/"/\\\"/g' | \
+                sed 's/$/\\n/g' | \
+                tr -d '\n')            # delete empty lines
 
               codeblock='```'
               pr_comment_json="{ \"body\": \"${codeblock}\n${pr_comment}\n${codeblock}\" }"
 
-              echo "URL: ${pr_comment_url}"
               echo "JSON----------------\n${pr_comment_json}\n----------------"
 
               curl --location --request POST "${pr_comment_url}" \
               -u $GH_USER:$GH_TOKEN \
               --header 'Content-Type: application/json' \
-              --data-binary "${pr_comment_json}" \
-              --trace-ascii moo.out
-
-              cat moo.out
+              --data-binary "${pr_comment_json}"
             fi
 
   apply:
