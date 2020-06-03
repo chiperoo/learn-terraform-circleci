@@ -176,17 +176,17 @@ workflows:
       - update_pr:
           requires:
             - plan
-#      - apply:
-#          requires:
-#            - plan
-#      - deployment:
-#          requires:
-#            - apply
-#      - hold:
-#          type: approval
-#          requires:
-#            - deployment
-#      - destroy:
-#          requires:
-#            - hold
+      - apply:
+          requires:
+            - plan
+      - deployment:
+          requires:
+            - apply
+      - hold:
+          type: approval
+          requires:
+            - deployment
+      - destroy:
+          requires:
+            - hold
 
