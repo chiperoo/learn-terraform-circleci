@@ -48,7 +48,7 @@ resource "aws_s3_bucket" "portfolio" {
     Name = "Portfolio Website Bucket"
   }
 
-  bucket = "${var.app}.${var.label}"
+  bucket = "${var.app}-${var.env}-${var.label}-${var.gibberish}"
   acl    = "public-read"
 
   website {
