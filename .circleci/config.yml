@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  jq: circleci/jq@2.1.0
 
 references:
 
@@ -70,8 +72,6 @@ publish_terraform_output: &publish_terraform_output
   run:
     name: publish terraform output
     command: |
-      pip install jq
-
       if [ $(cat /tmp/pr-response | jq length) -eq 0 ]; then
         echo "No PR found to update"
       else
