@@ -100,19 +100,6 @@ apply_job: &apply_job
         paths:
           - terraform-output
 
-compliance_test: &compliance_test
-  steps:
-    - run:
-        name: terraform-compliance tests
-        command: |
-          pip install terraform-compliance
-
-          terraform-compliance -f compliance-tests/ -p /tmp/terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
-    - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
-        root: /tmp
-        paths:
-          - terraform-compliance-test-output
-
 jobs:
 
   build:
@@ -152,6 +139,24 @@ jobs:
   apply-with-approval:
     <<: *apply_job
 
+  compliance_test:
+    docker: [{ image: "circleci/python:latest" }]
+    working_directory: "~/project"
+
+    steps:
+      - run:
+          name: terraform-compliance tests
+          command: |
+            pip install terraform-compliance
+
+            terraform-compliance -f compliance-tests/ -p /tmp/terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
+      - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
+          root: /tmp
+          paths:
+            - terraform-compliance-test-output
+      - publish_terraform_output:
+          input-file: /tmp/terraform-compliance-test-output
+
   update_open_pr:
     docker: [{ image: "circleci/python:latest" }]
     working_directory: "~/project"
@@ -166,9 +171,6 @@ jobs:
               -u $GH_USER:$GH_TOKEN > /tmp/pr-response
       - publish_terraform_output:
           input-file: /tmp/terraform-output
-      - *compliance_test
-      - publish_terraform_output:
-          input-file: /tmp/terraform-compliance-test-output
 
   update_closed_pr:
     docker: [{ image: "circleci/python:latest" }]
@@ -221,6 +223,9 @@ workflows:
           requires:
             - build
       - update_open_pr:
+          requires:
+            - plan
+      - compliance_test:
           requires:
             - plan
 #      - apply:
