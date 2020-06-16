@@ -101,12 +101,13 @@ apply_job: &apply_job
           - terraform-output
 
 compliance_test: &compliance_test
-  run:
-    name: terraform-compliance tests
-    command: |
-      pip install terraform-compliance
+  steps:
+    - run:
+      name: terraform-compliance tests
+      command: |
+        pip install terraform-compliance
 
-      terraform-compliance -f compliance-tests/ -p /tmp/terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
+        terraform-compliance -f compliance-tests/ -p /tmp/terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
     - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
         root: /tmp
         paths:
