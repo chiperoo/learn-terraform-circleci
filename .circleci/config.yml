@@ -100,7 +100,6 @@ apply_job: &apply_job
         paths:
           - terraform-output
 
-
 compliance_test: &compliance_test
   run:
     name: terraform-compliance tests
@@ -166,7 +165,8 @@ jobs:
               -u $GH_USER:$GH_TOKEN > /tmp/pr-response
       - publish_terraform_output:
           input-file: /tmp/terraform-output
-      - compliance_test:
+      - *compliance_test
+      - publish_terraform_output:
           input-file: /tmp/terraform-compliance-test-output
 
   update_closed_pr:
