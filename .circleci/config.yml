@@ -4,6 +4,39 @@ orbs:
 
 references:
 
+commands:
+  publish_terraform_output:
+    parameters:
+      input-file:
+        type: string
+    steps:
+      - run:
+          name: publish terraform output
+          command: |
+            if [ $(cat /tmp/pr-response | jq length) -eq 0 ]; then
+              echo "No PR found to update"
+            else
+              pr_comment_url=$(cat /tmp/pr-response | jq -r ".[0]._links.comments.href")
+
+              # get the TF plan output (from the workspace)
+              # 1. escape the double quotes
+              # 2. add a \n at the end of each line
+              # 3. delete the empty lines
+              pr_comment=$(cat << parameters.input-file >> | \
+                sed 's/"/\\\"/g' | \
+                sed 's/$/\\n/g' | \
+                tr -d '\n')
+
+              codeblock='```'
+              pr_comment_json="{ \"body\": \"${codeblock}\n${pr_comment}\n${codeblock}\" }"
+
+              curl --location --request POST "${pr_comment_url}" \
+                -u $GH_USER:$GH_TOKEN \
+                --header 'Content-Type: application/json' \
+                --data-binary "${pr_comment_json}"
+            fi
+
+
 base_image: &base_image
   hashicorp/terraform:light
 
@@ -68,35 +101,17 @@ apply_job: &apply_job
           - terraform-output
 
 
-publish_terraform_output: &publish_terraform_output
+compliance_test: &compliance_test
   run:
-    name: publish terraform output
+    name: terraform-compliance tests
     command: |
-      if [ $(cat /tmp/pr-response | jq length) -eq 0 ]; then
-        echo "No PR found to update"
-      else
-        pr_comment_url=$(cat /tmp/pr-response | jq -r ".[0]._links.comments.href")
+      pip install terraform-compliance
 
-        # get the TF plan output (from the workspace)
-        # 1. escape the double quotes
-        # 2. add a \n at the end of each line
-        # 3. delete the empty lines
-        pr_comment=$(cat /tmp/terraform-output | \
-          sed 's/"/\\\"/g' | \
-          sed 's/$/\\n/g' | \
-          tr -d '\n')
-
-        codeblock='```'
-        pr_comment_json="{ \"body\": \"${codeblock}\n${pr_comment}\n${codeblock}\" }"
-
-
-        echo "COMMENT-----${pr_comment_json}"
-
-        curl --location --request POST "${pr_comment_url}" \
-          -u $GH_USER:$GH_TOKEN \
-          --header 'Content-Type: application/json' \
-          --data-binary "${pr_comment_json}"
-      fi
+      terraform-compliance -f compliance-tests/ -p /tmp/terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
+    - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
+        root: /tmp
+        paths:
+          - terraform-compliance-test-output
 
 jobs:
 
@@ -125,10 +140,11 @@ jobs:
           command: |
             source $BASH_ENV
             cd ~/project/
-            terraform plan -input=false -no-color | tee /tmp/terraform-output
+            terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tee /tmp/terraform-output
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
+            - terraform-plan-outfile
             - terraform-output
 
   apply:
@@ -148,7 +164,10 @@ jobs:
           command: |
             curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open&sort=updated&direction=desc" \
               -u $GH_USER:$GH_TOKEN > /tmp/pr-response
-      - *publish_terraform_output
+      - publish_terraform_output:
+          input-file: /tmp/terraform-output
+      - compliance_test:
+          input-file: /tmp/terraform-compliance-test-output
 
   update_closed_pr:
     docker: [{ image: "circleci/python:latest" }]
@@ -162,7 +181,8 @@ jobs:
           command: |
             curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?state=closed&sort=updated&direction=desc" \
               -u $GH_USER:$GH_TOKEN > /tmp/pr-response
-      - *publish_terraform_output
+      - publish_terraform_output:
+          input-file: /tmp/terraform-output
 
   deployment:
     docker: [{ image: "circleci/python:latest" }]
