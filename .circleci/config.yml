@@ -1,6 +1,7 @@
 version: 2.1
 orbs:
   jq: circleci/jq@2.1.0
+  python: circleci/python@0.3.0
 
 references:
 
@@ -140,13 +141,12 @@ jobs:
     <<: *apply_job
 
   compliance_test:
-    docker: [{ image: "circleci/python:latest" }]
-    working_directory: "~/project"
-
+    <<: *default_config
     steps:
       - attach_workspace:
           at: /tmp
-      - checkout
+      - *restore_repo
+      - *set_terraform_environment
       - run:
           name: terraform-compliance tests
           command: |
