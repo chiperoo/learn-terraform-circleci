@@ -144,6 +144,7 @@ jobs:
     working_directory: "~/project"
 
     steps:
+      - *restore_repo
       - run:
           name: terraform-compliance tests
           command: |
