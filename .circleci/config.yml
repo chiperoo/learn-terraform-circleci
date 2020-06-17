@@ -147,6 +147,7 @@ jobs:
           at: /tmp
       - *restore_repo
       - *set_terraform_environment
+      - python/load-cache
       - run:
           name: terraform-compliance tests
           command: |
