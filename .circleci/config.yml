@@ -147,12 +147,10 @@ jobs:
           at: /tmp
       - *restore_repo
       - *set_terraform_environment
-      - python/load-cache
+      - python/install-deps
       - run:
           name: terraform-compliance tests
           command: |
-            pip install terraform-compliance
-
             terraform-compliance -f ~/project/compliance-tests/ -p /tmp/terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp

@@ -1,0 +1,2 @@
+# terraform-compliance
+terraform-compliance==1.2.6
