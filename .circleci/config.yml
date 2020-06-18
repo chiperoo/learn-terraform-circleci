@@ -76,7 +76,7 @@ set_terraform_environment: &set_terraform_environment
   run:
     name: set terraform environment
     command: |
-      cd && touch $BASH_ENV
+      source $BASH_ENV
       cd ~/project/
 
 terraform_install: &terraform_install
@@ -92,8 +92,6 @@ terraform_init: &terraform_init
   run:
     name: terraform init
     command: |
-      source $BASH_ENV
-      cd ~/project/
       terraform init -backend-config="token=${TF_API_TOKEN}"
 
 apply_job: &apply_job
@@ -135,8 +133,6 @@ jobs:
       - run:
           name: terraform plan
           command: |
-            source $BASH_ENV
-            cd ~/project/
             terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tee /tmp/terraform-output
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
