@@ -79,7 +79,7 @@ set_terraform_environment: &set_terraform_environment
       cd ..
       pwd
       ls -la
-      touch $BASH_ENV
+      touch .bashrc
       echo 'export PATH=~/bin/:$PATH' >> $BASH_ENV
       cd ~/project/
 
