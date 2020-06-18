@@ -76,6 +76,7 @@ set_terraform_environment: &set_terraform_environment
   run:
     name: set terraform environment
     command: |
+      touch $BASH_ENV
       echo 'export PATH=~/bin/:$PATH' >> $BASH_ENV
       cd ~/project/
 
