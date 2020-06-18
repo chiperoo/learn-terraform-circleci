@@ -37,20 +37,45 @@ commands:
                 --data-binary "${pr_comment_json}"
             fi
 
+working_directory: &working_directory
+  ~/project
+
+bin_directory: &bin_directory
+ /usr/local/bin
+
+defaults: &defaults
+  docker:
+    - image: circleci/python:latest
+  working_directory: *working_directory
+  environment:
+    TF_IN_AUTOMATION: true
+    
+tf-install: &tf-install
+  run:
+    name: tf-install
+    command: |
+      wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d /usr/local/bin
+      rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      terraform --version
+
+
 
 base_image: &base_image
   hashicorp/terraform:light
 
-working_directory: &working_directory
-  ~/project
+python_image: &python_image
+  circleci/python:latest
+
 
 default_config: &default_config
   docker:
-    - image: *base_image
+    - image: *python_image
   working_directory: *working_directory
   environment:
     BASH_ENV: /root/.bashrc
     TERRAFORM_ENV: ~/project/
+    TF_IN_AUTOMATION: true
 
 repo_cache_key: &repo_cache_key
   v1-repo-{{ .Branch }}-{{ .Revision }}
@@ -65,6 +90,7 @@ save_repo: &save_repo
     key: *repo_cache_key
     paths:
       - *working_directory
+      - *bin_directory
 
 set_terraform_environment: &set_terraform_environment
   run:
@@ -74,12 +100,16 @@ set_terraform_environment: &set_terraform_environment
       cd ~/project/
 
 terraform_init: &terraform_init
-  run:
-    name: terraform init
-    command: |
-      source $BASH_ENV
-      cd ~/project/
-      terraform init -backend-config="token=${TF_API_TOKEN}"
+  <<: *default_config
+  steps:
+    - *tf-install
+    - run:
+      name: terraform init
+      command: |
+        source $BASH_ENV
+        cd ~/project/
+        terraform init -backend-config="token=${TF_API_TOKEN}"
+    - *save_repo
 
 apply_job: &apply_job
   <<: *default_config
@@ -122,7 +152,6 @@ jobs:
     steps:
       - *restore_repo
       - *set_terraform_environment
-      - *terraform_init
       - run:
           name: terraform plan
           command: |
@@ -147,10 +176,11 @@ jobs:
           at: /tmp
       - *restore_repo
       - *set_terraform_environment
-      - python/install-deps
       - run:
           name: terraform-compliance tests
           command: |
+            pip install terraform-compliance
+
             terraform-compliance -f ~/project/compliance-tests/ -p /tmp/terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
