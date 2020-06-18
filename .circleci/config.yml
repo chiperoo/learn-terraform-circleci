@@ -76,6 +76,7 @@ set_terraform_environment: &set_terraform_environment
   run:
     name: set terraform environment
     command: |
+      cd ..
       pwd
       ls -la
       touch $BASH_ENV
@@ -119,8 +120,8 @@ jobs:
     <<: *default_config
     steps:
       - checkout
-      - *set_terraform_environment
       - *terraform_install
+      - *set_terraform_environment
       - *terraform_init
       - run:
           name: terraform fmt
