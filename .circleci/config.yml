@@ -91,7 +91,6 @@ terraform_init: &terraform_init
   run:
     name: terraform init
     command: |
-      echo 'export PATH=~/bin/:$PATH' >> $BASH_ENV
       terraform init -backend-config="token=${TF_API_TOKEN}"
 
 apply_job: &apply_job
