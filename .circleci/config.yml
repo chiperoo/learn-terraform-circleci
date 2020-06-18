@@ -1,7 +1,6 @@
 version: 2.1
 orbs:
   jq: circleci/jq@2.1.0
-  python: circleci/python@0.3.0
 
 references:
 
@@ -41,14 +40,8 @@ working_directory: &working_directory
   ~/project
 
 bin_directory: &bin_directory
- /usr/local/bin
+  /usr/local/bin
 
-defaults: &defaults
-  docker:
-    - image: circleci/python:latest
-  working_directory: *working_directory
-  environment:
-    TF_IN_AUTOMATION: true
     
 tf-install: &tf-install
   run:
@@ -58,8 +51,6 @@ tf-install: &tf-install
       sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d /usr/local/bin
       rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
       terraform --version
-
-
 
 base_image: &base_image
   hashicorp/terraform:light
