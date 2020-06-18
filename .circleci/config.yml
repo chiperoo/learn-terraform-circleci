@@ -40,7 +40,7 @@ working_directory: &working_directory
   ~/project
 
 bin_directory: &bin_directory
-  /usr/local/bin
+  ~/bin
 
 base_image: &base_image
   hashicorp/terraform:light
@@ -53,7 +53,7 @@ default_config: &default_config
     - image: *python_image
   working_directory: *working_directory
   environment:
-    BASH_ENV: /root/.bashrc
+    BASH_ENV: ~/.bashrc
     TERRAFORM_ENV: ~/project/
     TF_IN_AUTOMATION: true
 
@@ -76,6 +76,7 @@ set_terraform_environment: &set_terraform_environment
   run:
     name: set terraform environment
     command: |
+      echo 'export PATH=~/bin/:$PATH' >> $BASH_ENV
       cd ~/project/
 
 terraform_install: &terraform_install
@@ -83,9 +84,9 @@ terraform_install: &terraform_install
     name: install terraform
     command: |
       wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-      sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d /usr/local/bin
+      sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d ~/bin
       rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-      terraform --version
+      ~/bin/terraform --version
 
 terraform_init: &terraform_init
   run:
