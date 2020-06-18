@@ -76,6 +76,7 @@ set_terraform_environment: &set_terraform_environment
   run:
     name: set terraform environment
     command: |
+      echo $PATH
       cd ~/project/
 
 terraform_install: &terraform_install
@@ -132,7 +133,7 @@ jobs:
       - run:
           name: terraform plan
           command: |
-            terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tee /tmp/terraform-output
+            ~/bin/terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tee /tmp/terraform-output
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
@@ -156,7 +157,7 @@ jobs:
           command: |
             pip install terraform-compliance
 
-            terraform-compliance -f ~/project/compliance-tests/ -p /tmp/terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
+            terraform-compliance -f ~/project/compliance-tests/ -p /tmp/terraform-plan-outfile -t ~/bin/terraform | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
@@ -222,16 +223,16 @@ workflows:
   build_plan_approve_apply:
     jobs:
       - build
-      - plan:
-          context: learn-circle-staging
-          requires:
-            - build
-      - update_open_pr:
-          requires:
-            - plan
-      - compliance_test:
-          requires:
-            - plan
+#      - plan:
+#          context: learn-circle-staging
+#          requires:
+#            - build
+#      - update_open_pr:
+#          requires:
+#            - plan
+#      - compliance_test:
+#          requires:
+#            - plan
 #      - apply:
 #          context: learn-circle-staging
 #          requires:
