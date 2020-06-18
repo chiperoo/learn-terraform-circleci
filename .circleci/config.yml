@@ -42,22 +42,11 @@ working_directory: &working_directory
 bin_directory: &bin_directory
   /usr/local/bin
 
-    
-tf-install: &tf-install
-  run:
-    name: tf-install
-    command: |
-      wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-      sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d /usr/local/bin
-      rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-      terraform --version
-
 base_image: &base_image
   hashicorp/terraform:light
 
 python_image: &python_image
   circleci/python:latest
-
 
 default_config: &default_config
   docker:
@@ -90,32 +79,33 @@ set_terraform_environment: &set_terraform_environment
       cd && touch $BASH_ENV
       cd ~/project/
 
+terraform_install: &terraform_install
+  run:
+    name: install terraform
+    command: |
+      wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d /usr/local/bin
+      rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      terraform --version
+
 terraform_init: &terraform_init
-  <<: *default_config
-  steps:
-    - *tf-install
-    - run:
-      name: terraform init
-      command: |
-        source $BASH_ENV
-        cd ~/project/
-        terraform init -backend-config="token=${TF_API_TOKEN}"
-    - *save_repo
+  run:
+    name: terraform init
+    command: |
+      source $BASH_ENV
+      cd ~/project/
+      terraform init -backend-config="token=${TF_API_TOKEN}"
 
 apply_job: &apply_job
   <<: *default_config
   steps:
     - *restore_repo
     - *set_terraform_environment
-    - *terraform_init
     - attach_workspace:
         at: *working_directory
     - run:
         name: terraform apply
         command: |
-          source $BASH_ENV
-          cd ~/project/
-          terraform init -backend-config="token=${TF_API_TOKEN}"
           terraform apply --auto-approve -no-color | tee /tmp/terraform-output
     - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
         root: /tmp
@@ -129,12 +119,11 @@ jobs:
     steps:
       - checkout
       - *set_terraform_environment
+      - *terraform_install
+      - *terraform_init
       - run:
           name: terraform fmt
           command: |
-            source $BASH_ENV
-            cd ~/project/
-            terraform init -backend-config="token=${TF_API_TOKEN}"
             terraform fmt
       - *save_repo
 
@@ -228,12 +217,9 @@ jobs:
     steps:
       - *restore_repo
       - *set_terraform_environment
-      - *terraform_init
       - run:
           name: "Destruction of env"
           command: |
-            source $BASH_ENV
-            cd ~/project/
             terraform destroy --auto-approve
 
 workflows:
