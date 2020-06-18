@@ -76,7 +76,6 @@ set_terraform_environment: &set_terraform_environment
   run:
     name: set terraform environment
     command: |
-      source $BASH_ENV
       cd ~/project/
 
 terraform_install: &terraform_install
