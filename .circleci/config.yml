@@ -121,8 +121,7 @@ jobs:
       - run:
           name: terraform fmt
           command: |
-            echo 'export PATH=~/bin/:$PATH' >> $BASH_ENV
-            terraform fmt
+            ~/bin/terraform fmt
       - *save_repo
 
   plan:
