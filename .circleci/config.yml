@@ -38,9 +38,9 @@ commands:
                 -u $GH_USER:$GH_TOKEN \
                 --header 'Content-Type: application/json' \
                 --data-binary "${pr_comment_json}" \
-                --trace-asii moo.out
+                --trace-ascii ~/moo.out
 
-                cat moo.out
+                cat ~/moo.out
             fi
 
 working_directory: &working_directory
