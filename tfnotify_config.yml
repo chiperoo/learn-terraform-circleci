@@ -2,7 +2,7 @@
 ci: circleci
 notifier:
   github:
-    token: $GITHUB_TOKEN
+    token: $GH_TOKEN
     repository:
       owner: "chiperoo"
       name: "learn-terraform-circleci"
