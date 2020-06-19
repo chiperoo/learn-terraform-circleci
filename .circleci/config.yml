@@ -129,6 +129,7 @@ jobs:
       - checkout
       - *terraform_install
       - *set_terraform_environment
+      - go/install
       - *terraform_init
       - run:
           name: terraform fmt
