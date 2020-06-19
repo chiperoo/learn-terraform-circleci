@@ -21,10 +21,12 @@ commands:
               # get the TF plan output (from the workspace)
               # 1. escape the double quotes
               # 2. add a \n at the end of each line
+              # 3. delete non-ascii chars
               # 3. delete the empty lines
               pr_comment=$(cat << parameters.input-file >> | \
                 sed 's/"/\\\"/g' | \
                 sed 's/$/\\n/g' | \
+                tr -d '\200-\377' | \
                 tr -d '\n')
 
               codeblock='```'
@@ -158,6 +160,7 @@ jobs:
 
             # terraform seems to only be able to use the plugins when the plan file is local to the .terraform dir
             cp /tmp/terraform-plan-outfile .
+            # perl command strips out color coding
             terraform-compliance -f compliance-tests/ -p terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
       - publish_terraform_output:
           input-file: /tmp/terraform-compliance-test-output
