@@ -42,9 +42,6 @@ working_directory: &working_directory
 bin_directory: &bin_directory
   ~/bin
 
-base_image: &base_image
-  hashicorp/terraform:light
-
 python_image: &python_image
   circleci/python:latest
 
@@ -160,17 +157,10 @@ jobs:
             # terraform seems to only be able to use the plugins when the plan file is local to the .terraform dir
             cp /tmp/terraform-plan-outfile .
             terraform-compliance -f compliance-tests/ -p terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
-      - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
-          root: /tmp
-          paths:
-            - terraform-compliance-test-output
       - publish_terraform_output:
           input-file: /tmp/terraform-compliance-test-output
 
   update_open_pr:
-    docker: [{ image: "circleci/python:latest" }]
-    working_directory: "~/project"
-
     steps:
       - attach_workspace:
           at: /tmp
@@ -181,11 +171,12 @@ jobs:
               -u $GH_USER:$GH_TOKEN > /tmp/pr-response
       - publish_terraform_output:
           input-file: /tmp/terraform-output
+      - persist_to_workspace: # save the url for the open PR
+          root: /tmp
+          paths:
+            - pr-response
 
   update_closed_pr:
-    docker: [{ image: "circleci/python:latest" }]
-    working_directory: "~/project"
-
     steps:
       - attach_workspace:
           at: /tmp
