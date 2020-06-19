@@ -138,11 +138,12 @@ jobs:
       - *save_repo
 
   plan:
-    <<: *default_config
+    docker: [{ image: "circleci/golang:latest" }]
+    working_directory: "~/project"
+
     steps:
       - *restore_repo
       - *set_terraform_environment
-      - go/install
       - *tfnotify_install
       - run:
           name: terraform plan
