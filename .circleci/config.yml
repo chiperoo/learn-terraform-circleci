@@ -146,7 +146,7 @@ jobs:
 
   compliance_test:
     <<: *default_config
-    steps:[ -d newdir ] ||
+    steps:
       - attach_workspace:
           at: /tmp
       - *restore_repo
