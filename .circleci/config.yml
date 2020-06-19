@@ -85,7 +85,6 @@ terraform_install: &terraform_install
     command: |
       wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
       sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d ~/bin
-      [ -d ~/bin ] || mkdir ~/bin
       rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
       terraform --version
 
@@ -235,7 +234,7 @@ workflows:
             - plan
       - compliance_test:
           requires:
-            - plan
+            - update_open_pr
 #      - apply:
 #          context: learn-circle-staging
 #          requires:
