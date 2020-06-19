@@ -85,8 +85,9 @@ terraform_install: &terraform_install
     command: |
       wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
       sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d ~/bin
+      mkdir ~/bin
       rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-      ~/bin/terraform --version
+      terraform --version
 
 terraform_init: &terraform_init
   run:
@@ -122,7 +123,7 @@ jobs:
       - run:
           name: terraform fmt
           command: |
-            ~/bin/terraform fmt
+            terraform fmt
       - *save_repo
 
   plan:
@@ -133,7 +134,7 @@ jobs:
       - run:
           name: terraform plan
           command: |
-            ~/bin/terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tee /tmp/terraform-output
+            terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tee /tmp/terraform-output
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
@@ -157,7 +158,9 @@ jobs:
           command: |
             pip install terraform-compliance
 
-            terraform-compliance -f ~/project/compliance-tests/ -p /tmp/terraform-plan-outfile -t ~/bin/terraform | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
+            # terraform seems to only be able to use the plugins when the plan file is local to the .terraform dir
+            cp /tmp/terraform-plan-outfile .
+            terraform-compliance -f compliance-tests/ -p terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
@@ -223,16 +226,16 @@ workflows:
   build_plan_approve_apply:
     jobs:
       - build
-#      - plan:
-#          context: learn-circle-staging
-#          requires:
-#            - build
-#      - update_open_pr:
-#          requires:
-#            - plan
-#      - compliance_test:
-#          requires:
-#            - plan
+      - plan:
+          context: learn-circle-staging
+          requires:
+            - build
+      - update_open_pr:
+          requires:
+            - plan
+      - compliance_test:
+          requires:
+            - plan
 #      - apply:
 #          context: learn-circle-staging
 #          requires:
