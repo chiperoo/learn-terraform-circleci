@@ -98,7 +98,8 @@ tfnotify_install: &tfnotify_install
   run:
     name: install tfnotify
     command: |
-      go get -u github.com/mercari/tfnotify
+      wget https://github.com/mercari/tfnotify/releases/download/v0.6.2/tfnotify_linux_amd64.tar.gz
+      sudo tar -xf tfnotify_linux_amd64.tar.gz -d ~/bin
 
 terraform_init: &terraform_init
   run:
