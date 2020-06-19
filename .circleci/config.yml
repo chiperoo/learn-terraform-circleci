@@ -164,7 +164,7 @@ jobs:
             # terraform seems to only be able to use the plugins when the plan file is local to the .terraform dir
             cp /tmp/terraform-plan-outfile .
             # perl command strips out color coding
-            terraform-compliance -f compliance-tests/ -p terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
+            terraform-compliance -f compliance-tests/ -p terraform-plan-outfile -S | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
       - publish_terraform_output:
           input-file: /tmp/terraform-compliance-test-output
 
