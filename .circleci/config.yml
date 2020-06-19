@@ -30,6 +30,8 @@ commands:
               codeblock='```'
               pr_comment_json="{ \"body\": \"${codeblock}\n${pr_comment}\n${codeblock}\" }"
 
+              echo "JSON: ${pr_comment_json}"
+
               curl --location --request POST "${pr_comment_url}" \
                 -u $GH_USER:$GH_TOKEN \
                 --header 'Content-Type: application/json' \
@@ -144,7 +146,7 @@ jobs:
 
   compliance_test:
     <<: *default_config
-    steps:
+    steps:[ -d newdir ] ||
       - attach_workspace:
           at: /tmp
       - *restore_repo
