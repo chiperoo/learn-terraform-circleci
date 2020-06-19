@@ -161,6 +161,7 @@ jobs:
           input-file: /tmp/terraform-compliance-test-output
 
   update_open_pr:
+    <<: *default_config
     steps:
       - attach_workspace:
           at: /tmp
@@ -177,6 +178,7 @@ jobs:
             - pr-response
 
   update_closed_pr:
+    <<: *default_config
     steps:
       - attach_workspace:
           at: /tmp
