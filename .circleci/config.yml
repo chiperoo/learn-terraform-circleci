@@ -1,5 +1,6 @@
 version: 2.1
 orbs:
+  go: circleci/go@1.3.0
   jq: circleci/jq@2.1.0
 
 references:
@@ -42,6 +43,17 @@ commands:
 
                 cat ~/moo.out
             fi
+
+  tfnotify:
+    parameters:
+      input-file:
+        type: string
+        steps:
+          - run:
+              name: publish to github
+              command: | 
+                cat << parameters.input-file >> | tfnotify --config 
+
 
 working_directory: &working_directory
   ~/project
@@ -92,6 +104,12 @@ terraform_install: &terraform_install
       rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
       terraform --version
 
+tfnotify_install: &tfnotify_install
+  run:
+    name: install tfnotify
+    command: |
+      go get -u github.com/mercari/tfnotify
+
 terraform_init: &terraform_init
   run:
     name: terraform init
@@ -134,15 +152,17 @@ jobs:
     steps:
       - *restore_repo
       - *set_terraform_environment
+      - *tfnotify_install
       - run:
           name: terraform plan
           command: |
-            terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tee /tmp/terraform-output
+            # terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tee /tmp/terraform-output
+            terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tfnotify plan --config tfnotify_config.yml
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
             - terraform-plan-outfile
-            - terraform-output
+              # - terraform-output
 
   apply:
     <<: *apply_job
@@ -178,8 +198,8 @@ jobs:
           command: |
             curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open&sort=updated&direction=desc" \
               -u $GH_USER:$GH_TOKEN > /tmp/pr-response
-      - publish_terraform_output:
-          input-file: /tmp/terraform-output
+#      - publish_terraform_output:
+#          input-file: /tmp/terraform-output
       - persist_to_workspace: # save the url for the open PR
           root: /tmp
           paths:
