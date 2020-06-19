@@ -150,7 +150,7 @@ jobs:
           name: terraform plan
           command: |
             # terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tee /tmp/terraform-output
-            terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tfnotify plan --config tfnotify_config.yml
+            terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tfnotify --config tfnotify_config.yml plan
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
