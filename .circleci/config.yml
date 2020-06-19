@@ -82,7 +82,7 @@ set_terraform_environment: &set_terraform_environment
     name: set terraform environment
     command: |
       echo $PATH
-      touch $BASH_ENV
+      touch .bashrc
       cd ~/project/
 
 terraform_install: &terraform_install
