@@ -44,17 +44,6 @@ commands:
                 cat ~/moo.out
             fi
 
-  tfnotify:
-    parameters:
-      input-file:
-        type: string
-        steps:
-          - run:
-              name: publish to github
-              command: | 
-                cat << parameters.input-file >> | tfnotify --config 
-
-
 working_directory: &working_directory
   ~/project
 
