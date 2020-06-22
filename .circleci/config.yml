@@ -1,6 +1,5 @@
 version: 2.1
 orbs:
-  go: circleci/go@1.3.0
   jq: circleci/jq@2.1.0
 
 references:
@@ -33,16 +32,14 @@ commands:
               codeblock='```'
               pr_comment_json="{ \"body\": \"${codeblock}\n${pr_comment}\n${codeblock}\" }"
 
-              echo "pr_comment: ${pr_comment}"
-              echo "JSON: ${pr_comment_json}"
+              if [ !-z "${DEBUG}" ] then
+                echo "JSON: ${pr_comment_json}"
+              fi
 
               curl --location --request POST "${pr_comment_url}" \
                 -u $GH_USER:$GITHUB_TOKEN \
                 --header 'Content-Type: application/json' \
-                --data-binary "${pr_comment_json}" \
-                --trace-ascii ~/moo.out
-
-                cat ~/moo.out
+                --data-binary "${pr_comment_json}"
             fi
 
 working_directory: &working_directory
@@ -99,7 +96,7 @@ tfnotify_install: &tfnotify_install
   run:
     name: install tfnotify
     command: |
-      wget https://github.com/mercari/tfnotify/releases/download/v0.6.2/tfnotify_linux_amd64.tar.gz
+      wget https://github.com/mercari/tfnotify/releases/download/v${TFNOTIFY_VERSION}/tfnotify_linux_amd64.tar.gz
       sudo tar -xf tfnotify_linux_amd64.tar.gz -C ~/bin
 
 terraform_init: &terraform_init
@@ -114,11 +111,11 @@ apply_job: &apply_job
     - *restore_repo
     - *set_terraform_environment
     - attach_workspace:
-        at: *working_directory
+        at: /tmp
     - run:
         name: terraform apply
         command: |
-          terraform apply --auto-approve -no-color | tee /tmp/terraform-output
+          terraform apply --auto-approve -no-color /tmp/terraform-plan-outfile | tfnotify --config tfnotify_config.yml apply | tee /tmp/terraform-output
     - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
         root: /tmp
         paths:
@@ -148,17 +145,13 @@ jobs:
       - run:
           name: terraform plan
           command: |
-            # terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tee /tmp/terraform-output
             terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tfnotify --config tfnotify_config.yml plan
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
             - terraform-plan-outfile
-              # - terraform-output
 
   apply:
-    <<: *apply_job
-  apply-with-approval:
     <<: *apply_job
 
   compliance_test:
@@ -177,7 +170,6 @@ jobs:
             cp /tmp/terraform-plan-outfile .
             # perl command strips out color coding
              terraform-compliance -f compliance-tests/ -p terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
-             # terraform-compliance -f compliance-tests/ -p terraform-plan-outfile |  perl -pe 's/\x1b\[[0-9;]*[mG]//g' | iconv -f UTF-8 -t ASCII//TRANSLIT | tee /tmp/terraform-compliance-test-output
       - publish_terraform_output:
           input-file: /tmp/terraform-compliance-test-output
 
@@ -191,8 +183,6 @@ jobs:
           command: |
             curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open&sort=updated&direction=desc" \
               -u $GH_USER:$GITHUB_TOKEN > /tmp/pr-response
-#      - publish_terraform_output:
-#          input-file: /tmp/terraform-output
       - persist_to_workspace: # save the url for the open PR
           root: /tmp
           paths:
@@ -236,9 +226,12 @@ jobs:
 
 workflows:
   version: 2
-  build_plan_approve_apply:
+  build_plan:
     jobs:
       - build
+          filters:
+            branches:
+              ignore: master
       - plan:
           context: learn-circle-staging
           requires:
@@ -249,10 +242,17 @@ workflows:
       - compliance_test:
           requires:
             - update_open_pr
-#      - apply:
-#          context: learn-circle-staging
-#          requires:
-#            - plan
+  apply:
+    jobs:
+      - build
+          filters:
+            branches:
+              only:
+                - master
+      - apply:
+          context: learn-circle-staging
+          requires:
+            - build
 #      - deployment:
 #          requires:
 #            - apply
@@ -260,7 +260,12 @@ workflows:
 #          type: approval
 #          requires:
 #            - deployment
-#      - destroy:
-#          requires:
-#            - hold
-#
+      - update_closed_pr:
+          requires:
+            - apply
+      - compliance_test:
+          requires:
+            - update_closed_pr
+      - destroy:
+          requires:
+            - apply
