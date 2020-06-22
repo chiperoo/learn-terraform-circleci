@@ -115,7 +115,7 @@ apply_job: &apply_job
     - run:
         name: terraform apply
         command: |
-          terraform apply --auto-approve -no-color /tmp/terraform-plan-outfile | tfnotify --config tfnotify_config.yml apply | tee /tmp/terraform-output
+          terraform apply --auto-approve -no-color x | tfnotify --config tfnotify_config.yml apply | tee /tmp/terraform-output
     - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
         root: /tmp
         paths:
