@@ -19,7 +19,6 @@ commands:
             else
               pr_comment_url=$(cat /tmp/pr-response | jq -r ".[0]._links.comments.href")
 
-          echo "RAW: $(cat << parameters.input-file >>)"
               # get the TF plan output (from the workspace)
               # 1. escape the double quotes
               # 2. add a \n at the end of each line
@@ -30,6 +29,8 @@ commands:
                 sed 's/$/\\n/g' | \
                 tr -d '\200-\377' | \
                 tr -d '\n')
+
+          echo "PR_COMMENT: ${pr_comment}"
 
               codeblock='```'
               pr_comment_json="{ \"body\": \"${codeblock}\n${pr_comment}\n${codeblock}\" }"
