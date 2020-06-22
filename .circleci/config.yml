@@ -141,7 +141,7 @@ jobs:
   plan:
 #    docker: [{ image: "circleci/golang:latest" }]
 #    working_directory: "~/project"
-    <<: default_config
+    <<: *default_config
     steps:
       - *restore_repo
       - *set_terraform_environment
