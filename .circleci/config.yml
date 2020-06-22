@@ -228,7 +228,7 @@ workflows:
   version: 2
   build_plan:
     jobs:
-      - build
+      - build:
           filters:
             branches:
               ignore: master
@@ -244,7 +244,7 @@ workflows:
             - update_open_pr
   apply:
     jobs:
-      - build
+      - build:
           filters:
             branches:
               only:
