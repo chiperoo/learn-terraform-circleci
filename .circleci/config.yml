@@ -1,20 +1,64 @@
-version: 2
+version: 2.1
+orbs:
+  jq: circleci/jq@2.1.0
 
 references:
 
-base_image: &base_image
-  hashicorp/terraform:light
+commands:
+  publish_terraform_output:
+    parameters:
+      input-file:
+        type: string
+    steps:
+      - run:
+          name: publish terraform output
+          command: |
+            if [ $(cat /tmp/pr-response | jq length) -eq 0 ]; then
+              echo "No PR found to update"
+            else
+              pr_comment_url=$(cat /tmp/pr-response | jq -r ".[0]._links.comments.href")
+
+              # get the TF plan output (from the workspace)
+              # 1. escape the double quotes
+              # 2. add a \n at the end of each line
+              # 3. replace tab with spaces
+              # 4. delete the empty lines
+              pr_comment=$(cat << parameters.input-file >> | \
+                sed 's/"/\\\"/g' | \
+                sed 's/$/\\n/g' | \
+                sed 's/\t/    /g' | \
+                tr -d '\n')
+
+              codeblock='```'
+              pr_comment_json="{ \"body\": \"${codeblock}\n${pr_comment}\n${codeblock}\" }"
+
+              if [ -z ${DEBUG} ]; then
+                echo "JSON: ${pr_comment_json}"
+              fi
+
+              curl --location --request POST "${pr_comment_url}" \
+                -u $GH_USER:$GITHUB_TOKEN \
+                --header 'Content-Type: application/json' \
+                --data-binary "${pr_comment_json}"
+            fi
 
 working_directory: &working_directory
   ~/project
 
+bin_directory: &bin_directory
+  ~/bin
+
+python_image: &python_image
+  circleci/python:latest
+
 default_config: &default_config
   docker:
-    - image: *base_image
+    - image: *python_image
   working_directory: *working_directory
   environment:
-    BASH_ENV: /root/.bashrc
+    BASH_ENV: ~/.bashrc
     TERRAFORM_ENV: ~/project/
+    TF_IN_AUTOMATION: true
 
 repo_cache_key: &repo_cache_key
   v1-repo-{{ .Branch }}-{{ .Revision }}
@@ -29,48 +73,66 @@ save_repo: &save_repo
     key: *repo_cache_key
     paths:
       - *working_directory
+      - *bin_directory
 
 set_terraform_environment: &set_terraform_environment
   run:
     name: set terraform environment
     command: |
-      cd && touch $BASH_ENV
+      echo $PATH
+      touch .bashrc
       cd ~/project/
+
+terraform_install: &terraform_install
+  run:
+    name: install terraform
+    command: |
+      wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d ~/bin
+      rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      terraform --version
+
+tfnotify_install: &tfnotify_install
+  run:
+    name: install tfnotify
+    command: |
+      wget https://github.com/mercari/tfnotify/releases/download/v${TFNOTIFY_VERSION}/tfnotify_linux_amd64.tar.gz
+      sudo tar -xf tfnotify_linux_amd64.tar.gz -C ~/bin
+
 terraform_init: &terraform_init
   run:
     name: terraform init
     command: |
-      source $BASH_ENV
-      cd ~/project/
-      terraform init -backend-config="token=${TF_API_TOKEN}"
+      terraform init -reconfigure -backend-config="token=${TF_API_TOKEN}"
+
 apply_job: &apply_job
   <<: *default_config
   steps:
     - *restore_repo
     - *set_terraform_environment
-    - *terraform_init
     - attach_workspace:
-        at: *working_directory
+        at: /tmp
     - run:
         name: terraform apply
         command: |
-          source $BASH_ENV
-          cd ~/project/
-          terraform init -backend-config="token=${TF_API_TOKEN}"
-          terraform apply --auto-approve
+          terraform apply --auto-approve -no-color /tmp/terraform-plan-outfile | tfnotify --config tfnotify_config.yml apply | tee /tmp/terraform-output
+    - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
+        root: /tmp
+        paths:
+          - terraform-output
+
 jobs:
 
   build:
     <<: *default_config
     steps:
       - checkout
+      - *terraform_install
       - *set_terraform_environment
+      - *terraform_init
       - run:
           name: terraform fmt
           command: |
-            source $BASH_ENV
-            cd ~/project/
-            terraform init -backend-config="token=${TF_API_TOKEN}"
             terraform fmt
       - *save_repo
 
@@ -79,20 +141,65 @@ jobs:
     steps:
       - *restore_repo
       - *set_terraform_environment
-      - *terraform_init
+      - *tfnotify_install
       - run:
           name: terraform plan
           command: |
-            source $BASH_ENV
-            cd ~/project/
-            terraform plan
-
-
+            terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tfnotify --config tfnotify_config.yml plan
+      - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
+          root: /tmp
+          paths:
+            - terraform-plan-outfile
 
   apply:
     <<: *apply_job
-  apply-with-approval:
-    <<: *apply_job
+
+  compliance_test:
+    <<: *default_config
+    steps:
+      - attach_workspace:
+          at: /tmp
+      - *restore_repo
+      - *set_terraform_environment
+      - run:
+          name: terraform-compliance tests
+          command: |
+            pip install terraform-compliance
+
+            # terraform seems to only be able to use the plugins when the plan file is local to the .terraform dir
+            cp /tmp/terraform-plan-outfile .
+            # perl command strips out color coding
+             terraform-compliance -f compliance-tests/ -p terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
+      - publish_terraform_output:
+          input-file: /tmp/terraform-compliance-test-output
+
+  update_open_pr:
+    <<: *default_config
+    steps:
+      - attach_workspace:
+          at: /tmp
+      - run:
+          name: get open pr url
+          command: |
+            curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open&sort=updated&direction=desc" \
+              -u $GH_USER:$GITHUB_TOKEN > /tmp/pr-response
+      - persist_to_workspace: # save the url for the open PR
+          root: /tmp
+          paths:
+            - pr-response
+
+  update_closed_pr:
+    <<: *default_config
+    steps:
+      - attach_workspace:
+          at: /tmp
+      - run:
+          name: get closed pr url
+          command: |
+            curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?state=closed&sort=updated&direction=desc" \
+              -u $GH_USER:$GITHUB_TOKEN > /tmp/pr-response
+      - publish_terraform_output:
+          input-file: /tmp/terraform-output
 
   deployment:
     docker: [{ image: "circleci/python:latest" }]
@@ -105,43 +212,60 @@ jobs:
             pip install --user awscli
             export PATH="~/.local/bin:$PATH"
             git clone https://github.com/hashicorp/learn-terraform-circleci/ .
-            pwd
             aws s3 sync --acl public-read "/home/circleci/project/assets" s3://${APP_BUCKET}
-
 
   destroy:
     <<: *default_config
     steps:
       - *restore_repo
       - *set_terraform_environment
-      - *terraform_init
       - run:
           name: "Destruction of env"
           command: |
-            source $BASH_ENV
-            cd ~/project/
             terraform destroy --auto-approve
-
 
 workflows:
   version: 2
-  build_plan_approve_apply:
+  build_plan:
     jobs:
-      - build
+      - build:
+          filters:
+            branches:
+              ignore: master
       - plan:
+          context: learn-circle-staging
           requires:
             - build
-      - apply:
+      - update_open_pr:
           requires:
             - plan
-      - deployment:
+      - compliance_test:
+          requires:
+            - update_open_pr
+  apply:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only:
+                - master
+      - apply:
+          context: learn-circle-staging
+          requires:
+            - build
+#      - deployment:
+#          requires:
+#            - apply
+#      - hold:
+#          type: approval
+#          requires:
+#            - deployment
+      - update_closed_pr:
           requires:
             - apply
-      - hold:
-          type: approval
+      - compliance_test:
           requires:
-            - deployment
+            - update_closed_pr
       - destroy:
           requires:
-            - hold
-
+            - apply

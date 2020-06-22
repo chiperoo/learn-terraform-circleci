@@ -1,7 +1,7 @@
 terraform {
   backend "remote" {
     hostname     = "app.terraform.io"
-    organization = "<YOUR-ORG-NAME>"
+    organization = "electric"
 
     workspaces {
       name = "learn-terraform-circleci"
@@ -10,7 +10,8 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  version = "~> 2.66"
+  region  = var.region
 }
 
 provider "template" {
@@ -48,7 +49,7 @@ resource "aws_s3_bucket" "portfolio" {
     Name = "Portfolio Website Bucket"
   }
 
-  bucket = "${var.app}.${var.label}"
+  bucket = "${var.app}-${var.env}-${var.label}-${var.gibberish}"
   acl    = "public-read"
 
   website {
