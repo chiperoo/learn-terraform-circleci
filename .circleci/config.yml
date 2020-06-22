@@ -39,7 +39,7 @@ commands:
                 -u $GH_USER:$GITHUB_TOKEN \
                 --header 'Content-Type: application/json' \
                 --data-binary "${pr_comment_json}" \
-                --trace ~/moo.out
+                --trace-ascii ~/moo.out
 
                 cat ~/moo.out
             fi
@@ -176,7 +176,7 @@ jobs:
             cp /tmp/terraform-plan-outfile .
             # perl command strips out color coding
             # terraform-compliance -f compliance-tests/ -p terraform-plan-outfile | perl -pe 's/\x1b\[[0-9;]*[mG]//g' | tee /tmp/terraform-compliance-test-output
-            terraform-compliance -f compliance-tests/ -p terraform-plan-outfile | iconv -f UTF-8 -t ASCII//TRANSLIT | tee /tmp/terraform-compliance-test-output
+            terraform-compliance -f compliance-tests/ -p terraform-plan-outfile |  perl -pe 's/\x1b\[[0-9;]*[mG]//g' | iconv -f UTF-8 -t ASCII//TRANSLIT | tee /tmp/terraform-compliance-test-output
       - publish_terraform_output:
           input-file: /tmp/terraform-compliance-test-output
 
