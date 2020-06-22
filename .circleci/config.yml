@@ -116,7 +116,7 @@ apply_job: &apply_job
     - run:
         name: terraform apply
         command: |
-          terraform apply --auto-approve -no-color x | tfnotify --config tfnotify_config.yml apply | tee /tmp/terraform-output
+          terraform apply --auto-approve -no-color | tfnotify --config tfnotify_config.yml apply | tee /tmp/terraform-output
     - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
         root: /tmp
         paths:
@@ -227,22 +227,22 @@ jobs:
 
 workflows:
   version: 2
-  build_plan:
-    jobs:
-      - build:
-          filters:
-            branches:
-              ignore: master
-      - plan:
-          context: learn-circle-staging
-          requires:
-            - build
-      - update_open_pr:
-          requires:
-            - plan
-      - compliance_test:
-          requires:
-            - update_open_pr
+#  build_plan:
+#    jobs:
+#      - build:
+#          filters:
+#            branches:
+#              ignore: master
+#      - plan:
+#          context: learn-circle-staging
+#          requires:
+#            - build
+#      - update_open_pr:
+#          requires:
+#            - plan
+#      - compliance_test:
+#          requires:
+#            - update_open_pr
   apply:
     jobs:
       - build:
