@@ -30,11 +30,10 @@ commands:
                 tr -d '\200-\377' | \
                 tr -d '\n')
 
-          echo "PR_COMMENT: ${pr_comment}"
-
               codeblock='```'
               pr_comment_json="{ \"body\": \"${codeblock}\n${pr_comment}\n${codeblock}\" }"
 
+              echo "pr_comment: ${pr_comment}"
               echo "JSON: ${pr_comment_json}"
 
               curl --location --request POST "${pr_comment_url}" \
