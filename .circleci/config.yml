@@ -32,7 +32,7 @@ commands:
               codeblock='```'
               pr_comment_json="{ \"body\": \"${codeblock}\n${pr_comment}\n${codeblock}\" }"
 
-              if [ !-z "${DEBUG}" ] then
+              if [ -z ${DEBUG} ]; then
                 echo "JSON: ${pr_comment_json}"
               fi
 
