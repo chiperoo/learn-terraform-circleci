@@ -36,7 +36,7 @@ commands:
               echo "JSON: ${pr_comment_json}"
 
               curl --location --request POST "${pr_comment_url}" \
-                -u $GH_USER:$GH_TOKEN \
+                -u $GH_USER:$GITHUB_TOKEN \
                 --header 'Content-Type: application/json' \
                 --data-binary "${pr_comment_json}" \
                 --trace ~/moo.out
@@ -139,9 +139,9 @@ jobs:
       - *save_repo
 
   plan:
-    docker: [{ image: "circleci/golang:latest" }]
-    working_directory: "~/project"
-
+#    docker: [{ image: "circleci/golang:latest" }]
+#    working_directory: "~/project"
+    <<: default_config
     steps:
       - *restore_repo
       - *set_terraform_environment
@@ -190,7 +190,7 @@ jobs:
           name: get open pr url
           command: |
             curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open&sort=updated&direction=desc" \
-              -u $GH_USER:$GH_TOKEN > /tmp/pr-response
+              -u $GH_USER:$GITHUB_TOKEN > /tmp/pr-response
 #      - publish_terraform_output:
 #          input-file: /tmp/terraform-output
       - persist_to_workspace: # save the url for the open PR
@@ -207,7 +207,7 @@ jobs:
           name: get closed pr url
           command: |
             curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?state=closed&sort=updated&direction=desc" \
-              -u $GH_USER:$GH_TOKEN > /tmp/pr-response
+              -u $GH_USER:$GITHUB_TOKEN > /tmp/pr-response
       - publish_terraform_output:
           input-file: /tmp/terraform-output
 
