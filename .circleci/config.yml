@@ -110,6 +110,7 @@ apply_job: &apply_job
   steps:
     - *restore_repo
     - *set_terraform_environment
+    - *tfnotify_install
     - attach_workspace:
         at: /tmp
     - run:
