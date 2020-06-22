@@ -22,12 +22,12 @@ commands:
               # get the TF plan output (from the workspace)
               # 1. escape the double quotes
               # 2. add a \n at the end of each line
-              # 3. delete non-ascii chars
-              # 3. delete the empty lines
+              # 3. replace tab with spaces
+              # 4. delete the empty lines
               pr_comment=$(cat << parameters.input-file >> | \
                 sed 's/"/\\\"/g' | \
                 sed 's/$/\\n/g' | \
-                tr -d '\200-\377' | \
+                sed 's/\t/    /g' | \
                 tr -d '\n')
 
               codeblock='```'
