@@ -137,8 +137,7 @@ jobs:
     <<: *default_config
     steps:
       - checkout
-      - *terraform_installPR_NUMBER=$(echo $CIRCLE_PULL_REQUEST | cut -d'/' -f7)
-pr_comment_url=https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/issues/$PR_NUMBER/comments
+      - *terraform_install
       - *set_terraform_environment
       - *terraform_init
       - run:
