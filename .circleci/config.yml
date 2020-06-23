@@ -124,13 +124,13 @@ apply_job: &apply_job
         paths:
           - terraform-output
 
-#get_open_pr_url: &open_pr_url
-#  run:
-#    name: get open pr url
-#    command: |
-#      curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open&sort=updated&direction=desc" \
-#        -u $GH_USER:$GITHUB_TOKEN > /tmp/pr-response
-#
+get_open_pr_url: &open_pr_url
+  run:
+    name: get open pr url
+    command: |
+      curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open&sort=updated&direction=desc" \
+        -u $GH_USER:$GITHUB_TOKEN > /tmp/pr-response
+
 jobs:
 
   build:
@@ -171,7 +171,6 @@ jobs:
           at: /tmp
       - *restore_repo
       - *set_terraform_environment
-      - *get_open_pr_url
       - run:
           name: terraform-compliance tests
           command: |
