@@ -1,6 +1,5 @@
 version: 2.1
 orbs:
-  jq: circleci/jq@2.1.0
 
 references:
 
@@ -13,10 +12,13 @@ commands:
       - run:
           name: publish terraform output
           command: |
-            if [ $(cat /tmp/pr-response | jq length) -eq 0 ]; then
+
+            if [ -z ${CIRCLE_PULL_REQUEST} ]; then
               echo "No PR found to update"
             else
-              pr_comment_url=$(cat /tmp/pr-response | jq -r ".[0]._links.comments.href")
+              PR_NUMBER=$(echo ${CIRCLE_PULL_REQUEST} | cut -d'/' -f7)
+              pr_comment_url=https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/issues/${PR_NUMBER}/comments
+              #pr_comment_url=$(cat /tmp/pr-response | jq -r ".[0]._links.comments.href")
 
               # get the TF plan output (from the workspace)
               # 1. escape the double quotes
@@ -146,7 +148,7 @@ jobs:
       - run:
           name: terraform plan
           command: |
-            terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tfnotify --config tfnotify_config.yml plan
+            terraform plan -input=false -no-color -out=/tmp/terraform-plan-outfile | tfnotify --config tfnotify_github.yml plan
       - persist_to_workspace: # save the TF plan output to the workspace for updating a PR
           root: /tmp
           paths:
@@ -174,20 +176,20 @@ jobs:
       - publish_terraform_output:
           input-file: /tmp/terraform-compliance-test-output
 
-  update_open_pr:
-    <<: *default_config
-    steps:
-      - attach_workspace:
-          at: /tmp
-      - run:
-          name: get open pr url
-          command: |
-            curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open&sort=updated&direction=desc" \
-              -u $GH_USER:$GITHUB_TOKEN > /tmp/pr-response
-      - persist_to_workspace: # save the url for the open PR
-          root: /tmp
-          paths:
-            - pr-response
+#  update_open_pr:
+#    <<: *default_config
+#    steps:
+#      - attach_workspace:
+#          at: /tmp
+#      - run:
+#          name: get open pr url
+#          command: |
+#            curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open&sort=updated&direction=desc" \
+#              -u $GH_USER:$GITHUB_TOKEN > /tmp/pr-response
+#      - persist_to_workspace: # save the url for the open PR
+#          root: /tmp
+#          paths:
+#            - pr-response
 
   update_closed_pr:
     <<: *default_config
@@ -227,22 +229,22 @@ jobs:
 
 workflows:
   version: 2
-#  build_plan:
-#    jobs:
-#      - build:
-#          filters:
-#            branches:
-#              ignore: master
-#      - plan:
-#          context: learn-circle-staging
-#          requires:
-#            - build
+  build_plan:
+    jobs:
+      - build:
+          filters:
+            branches:
+              ignore: master
+      - plan:
+          context: learn-circle-staging
+          requires:
+            - build
 #      - update_open_pr:
 #          requires:
 #            - plan
-#      - compliance_test:
-#          requires:
-#            - update_open_pr
+      - compliance_test:
+          requires:
+            - plan
   apply:
     jobs:
       - build:
@@ -264,9 +266,6 @@ workflows:
       - update_closed_pr:
           requires:
             - apply
-      - compliance_test:
-          requires:
-            - update_closed_pr
       - destroy:
           requires:
             - apply
