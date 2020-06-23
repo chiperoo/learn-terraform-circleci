@@ -13,7 +13,7 @@ commands:
           name: publish terraform output
           command: |
 
-            if [ -n ${CIRCLE_PULL_REQUEST} ]; then
+            if [ -z ${CIRCLE_PULL_REQUEST} ]; then
               echo "No PR found to update"
             else
               PR_NUMBER=$(echo ${CIRCLE_PULL_REQUEST} | cut -d'/' -f7)
@@ -123,13 +123,6 @@ apply_job: &apply_job
         root: /tmp
         paths:
           - terraform-output
-
-get_open_pr_url: &open_pr_url
-  run:
-    name: get open pr url
-    command: |
-      curl --location --request GET "https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH&state=open&sort=updated&direction=desc" \
-        -u $GH_USER:$GITHUB_TOKEN > /tmp/pr-response
 
 jobs:
 
